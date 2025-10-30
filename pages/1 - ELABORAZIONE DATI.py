@@ -66,22 +66,23 @@ if ("gdm" and "ord" and "anag") in st.session_state:
     cont=st.container()
     c1,c2,c3=cont.columns([0.2,0.2,1-0.2*2])
 
-    excel_bytes = f.to_excel(gdm,ordine_sel)
-    c1.download_button(
-        label="📥 Scarica Excel",
-        data=excel_bytes,
-        file_name=f"Esito 2 terzi ordine {ordine_sel}.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        use_container_width=True)
+    if ordine_sel:
+        excel_bytes = f.to_excel(gdm,ordine_sel)
+        c1.download_button(
+            label="📥 Scarica Excel",
+            data=excel_bytes,
+            file_name=f"Esito 2 terzi ordine {ordine_sel}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True)
     
-    testo = f.creaMail(df_f,gdm)
-    c2.download_button(
-        label="📨 Scrivi Mail",
-        data=testo,
-        file_name=f"Mail 2 terzi ordine {ordine_sel}.txt",
-        mime="text/plain",
-        use_container_width=True
-    )
+        testo = f.creaMail(df_f,gdm)
+        c2.download_button(
+            label="📨 Scrivi Mail",
+            data=testo,
+            file_name=f"Mail 2 terzi ordine {ordine_sel}.txt",
+            mime="text/plain",
+            use_container_width=True
+        )
 
 
 

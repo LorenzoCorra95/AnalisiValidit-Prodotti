@@ -9,47 +9,61 @@ st.set_page_config(layout="wide")
 @st.dialog("Esito operazione")
 def messaggio(testo):
     st.write(testo)
-st.title("Incolla dati da Excel")
 
 
-st.subheader("GIORNALE DI MAGAZZINO",divider="orange")
-gdm_data = st.text_area("Incolla qui i dati del giornale di magazzino, con le intestazioni (Ctrl+V):",height=400,key="tab_gdm")
+st.subheader("CARICA I TUOI FILE",divider="orange")
+FileGdm = st.file_uploader("Carica il file del giornale di magazzino", type = ["xlsx", "csv", "xls","parquet","txt"],accept_multiple_files=False)
+FileAreas = st.file_uploader("Carica il file degli ordini", type = ["xlsx", "csv", "xls","parquet","txt"],accept_multiple_files=False)
+FileAnag = st.file_uploader("Carica il file dell'anagrafica", type = ["xlsx", "csv", "xls","parquet","txt"],accept_multiple_files=False)
 
-if gdm_data:
-    intestazioni=[
-    "Data Attività","Magazzino", "Prodotto","Riferimento Ordine Carico","Riferimento DDT Carico","Lotto",
-    "Qta Movimentata","Causale Rettifica"]
-    gdm = pd.read_csv(StringIO(gdm_data), sep="\t",dtype={"Riferimento DDT Carico":str})
-    gdm["Data Attività"]=pd.to_datetime(gdm["Data Attività"],dayfirst=True)
-    gdm["Data DDT Carico"]=pd.to_datetime(gdm["Data DDT Carico"],dayfirst=True)
-    gdm["Data scadenza"]=pd.to_datetime(gdm["Data scadenza"],dayfirst=True)
-    if st.button("Carica GDM",key="carica_gdm"):
-        st.session_state["gdm"]=gdm
-        messaggio("Dati caricati con successo!")
+if FileGdm:
+    try:
+        if FileGdm.name.endswith(".csv") or FileGdm.name.endswith(".txt"):
+                df = pd.read_csv(FileGdm, sep = ";", encoding="latin-1",dtype={"Riferimento DDT Carico":str})      
+        elif FileGdm.name.endswith(".xlsx") or FileGdm.name.endswith(".xls"):
+            try:
+                df = pd.read_excel(FileGdm,engine="openpyxl",dtype={"Riferimento DDT Carico":str})
+            except:
+                df = pd.read_excel(FileGdm,engine="pyxlsb",dtype={"Riferimento DDT Carico":str})
+        df["Data Attività"]=pd.to_datetime(df["Data Attività"],dayfirst=True)
+        df["Data DDT Carico"]=pd.to_datetime(df["Data DDT Carico"],dayfirst=True)
+        df["Data scadenza"]=pd.to_datetime(df["Data scadenza"],dayfirst=True)
+        st.session_state.gdm=df
+    except:
+         messaggio("Non è stato possibile caricare il file!")
+
+if FileAreas:
+    # try:
+        if FileAreas.name.endswith(".csv") or FileAreas.name.endswith(".txt"):
+                df = pd.read_csv(FileAreas, sep = ";", encoding="latin-1")        
+        elif FileAreas.name.endswith(".xlsx") or FileAreas.name.endswith(".xls"):
+            try:
+                df = pd.read_excel(FileAreas,engine="openpyxl")
+            except:
+                df = pd.read_excel(FileAreas,engine="calamine")
+        campi = [
+        "Anno", "Num.", "Data ordine",
+        "Fornitore",
+        "Autorizzazione", "Prodotto", "Descrizione","Qta/Val Rettificata", 
+        "Prezzo Unit."
+        ]
+        df=df[campi]
+        df["Data ordine"]=pd.to_datetime(df["Data ordine"],dayfirst=True)
+        st.session_state.ord=df
+    # except:
+    #      messaggio("Non è stato possibile caricare il file!")
+
+if FileAnag:
+    try:
+        if FileAnag.name.endswith(".csv") or FileAnag.name.endswith(".txt"):
+                df = pd.read_csv(FileAnag, sep = ";", encoding="latin-1",dtype={"MinSan10":str})     
+        elif FileAnag.name.endswith(".xlsx") or FileAnag.name.endswith(".xls"):
+            try:
+                df = pd.read_excel(FileAnag,engine="openpyxl",dtype={"MinSan10":str})
+            except:
+                df = pd.read_excel(FileAnag,engine="pyxlsb",dtype={"MinSan10":str})
         
-st.subheader("ORDINI AREAS",divider="blue")
-ordini_data = st.text_area("Incolla qui i dati degli ordini Areas, con le intestazioni (Ctrl+V):",height=400,key="tab_ordini")
-
-if ordini_data:
-    ord = pd.read_csv(StringIO(ordini_data), sep="\t")
-    campi = [
-    "Anno", "Num.", "Data ordine",
-    "Fornitore",
-    "Autorizzazione", "Prodotto", "Descrizione","Qta/Val Rettificata", 
-    "Prezzo Unit."
-    ]
-    ord=ord[campi]
-    ord["Data ordine"]=pd.to_datetime(ord["Data ordine"],dayfirst=True)
-    if st.button("Carica Ordini",key="carica_ordini"):
-        st.session_state["ord"]=ord
-        messaggio("Dati caricati con successo!")
-
-st.subheader("ANAGRAFICA",divider="green")
-anagrafica = st.text_area("Incolla qui i dati dell'anagrafica, con le intestazioni (Ctrl+V):",height=400,key="tab_anagrafica")
-
-if anagrafica:
-    anag = pd.read_csv(StringIO(anagrafica), sep="\t",dtype={"MinSan10":str})
-    anag=anag.rename(columns={"MinSan10":"Minsan"})
-    if st.button("Carica Anagrafica",key="carica_anag"):
-        st.session_state["anag"]=anag
-        messaggio("Dati caricati con successo!")
+        df=df.rename(columns={"MinSan10":"Minsan"})
+        st.session_state.anag=df
+    except:
+         messaggio("Non è stato possibile caricare il file!")

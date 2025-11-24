@@ -9,7 +9,7 @@ st.set_page_config(layout="wide")
 
 if ("gdm" and "ord" and "anag") in st.session_state:
 
-    st.subheader("Tabella Giornale di magazzino")
+    st.subheader("📦 Tabella Giornale di magazzino")
     gdm_def=st.session_state["gdm"].copy()
     gdm_def["Minsan"]=gdm_def["Prodotto"].apply(lambda x: x[0:9])
     gdm_def["Descrizione"]=gdm_def["Prodotto"].apply(lambda x:x[12:])
@@ -26,7 +26,7 @@ if ("gdm" and "ord" and "anag") in st.session_state:
     st.session_state["gdm_def"]=gdm_def
     st.dataframe(st.session_state["gdm_def"].iloc[:,indiceInt],use_container_width=True)
 
-    st.subheader("Tabella Ordini")
+    st.subheader("📝 Tabella Ordini")
     ord=st.session_state["ord"]
     anag=st.session_state["anag"]
     ord_def=pd.merge(ord,anag,left_on="Prodotto",right_on="Codice",how="left")
@@ -43,6 +43,9 @@ if ("gdm" and "ord" and "anag") in st.session_state:
     st.subheader("Elaborazione Due Terzi",divider="blue")
     data_in_carico=st.date_input("Seleziona una data iniziale di carico")
     evasi_tot,evasi_parz,non_evasi=f.EvasioneOrdini(st.session_state.gdm_def, st.session_state.ord_def,data_in_carico)
+    st.session_state["EvasioTot"]=evasi_tot
+    st.session_state["EvasioParz"]=evasi_parz
+    st.session_state["NonEvasi"]=non_evasi
     df=st.session_state["ordini_caricati"]
     lista_ord=df["Ordine"].unique()
     ordine_sel=st.selectbox("Seleziona l'ordine da visualizzare",lista_ord,key="ordine_sel")
@@ -53,29 +56,30 @@ if ("gdm" and "ord" and "anag") in st.session_state:
     "Data Attività","Magazzino","Minsan","Descrizione","Riferimento Ordine Carico","Riferimento DDT Carico","Data DDT Carico","Lotto",
     "Data scadenza","Qta Movimentata","Validità residua","Validità confezione integra","Esito"]
     indiceInt=[indice for indice in [gdm_def.columns.get_loc(i) for i in intestazioni]]
-    gdm=st.session_state.gdm_def[st.session_state.gdm_def["Riferimento Ordine Carico"]==ordine_sel].iloc[:,indiceInt]
-    esito_ord=c2.text_input("Esito 2/3",value= "INFERIORE" if "INFERIORE" in gdm["Esito"].tolist() else "SUPERIORE",disabled=True)
+    gdm_tot=st.session_state.gdm_def.iloc[:,indiceInt]
+    gdm_sel=st.session_state.gdm_def[st.session_state.gdm_def["Riferimento Ordine Carico"]==ordine_sel].iloc[:,indiceInt]
+    esito_ord=c2.text_input("Esito 2/3",value= "INFERIORE" if "INFERIORE" in gdm_sel["Esito"].tolist() else "SUPERIORE",disabled=True)
                         
     df=st.session_state["ordini_caricati"]
     df_f=df[df["Ordine"]==ordine_sel]
     st.write(f"Ordinato con ordine {ordine_sel}")
     st.dataframe(df_f,use_container_width=True)
     st.write(f"Caricato per ordine {ordine_sel}")
-    st.dataframe(gdm,use_container_width=True)
+    st.dataframe(gdm_sel,use_container_width=True)
 
     cont=st.container()
     c1,c2,c3=cont.columns([0.2,0.2,1-0.2*2])
 
     if ordine_sel:
-        excel_bytes = f.to_excel(gdm,ordine_sel)
+        excel_bytes = f.to_excel(gdm_sel,ordine_sel)
         c1.download_button(
             label="📥 Scarica Excel",
             data=excel_bytes,
             file_name=f"Esito 2 terzi ordine {ordine_sel}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             use_container_width=True)
-    
-        testo = f.creaMail(df_f,gdm)
+        
+        testo = f.creaMail(df_f,gdm_sel)
         c2.download_button(
             label="📨 Scrivi Mail",
             data=testo,
@@ -85,5 +89,7 @@ if ("gdm" and "ord" and "anag") in st.session_state:
         )
 
 
-
+    if st.toggle("Vedi tutti gli ordini inferiori"):
+        st.subheader("Ordini inferiori ai 2/3, evasi totalmente",divider="green")
+        f.creaMailOrdiniTot(df,gdm_tot)
    

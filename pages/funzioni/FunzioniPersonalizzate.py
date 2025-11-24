@@ -56,9 +56,11 @@ def creaMail(df_f,gdm):
     ordine=df_f["Ordine"].unique()[0]
     data_ordine=format(df_f["Data ordine"].unique()[0],'%d/%m/%Y')
 
+    oggetto=f"RICHIESTA DI IMPEGNO PREVENTIVO AL RESO/NOTA DI CREDITO ORDINE {ordine}"
+
     intestazione=f"Spett.le {fornitore},\n\n"
 
-    ddt=gdm[["Riferimento DDT Carico","Data DDT Carico"]].drop_duplicates()
+    ddt=gdm[gdm["Esito"]=="INFERIORE"][["Riferimento DDT Carico","Data DDT Carico"]].drop_duplicates()
     inferiore=gdm[gdm["Esito"]=="INFERIORE"][["Qta Movimentata","Minsan","Descrizione","Lotto","Data scadenza"]]
 
     lista_ddt=[]
@@ -96,6 +98,36 @@ def creaMail(df_f,gdm):
     
     chiusura="Si ringrazia anticipatamente per la collaborazione e, in attesa di un Vostro riscontro, si porgono cordiali saluti.\n\n"
 
-    mail=intestazione+testo_ddt+testo_righe_prodotti+"\n"+testo_intermezzo+testo_ritiro+"\n"+chiusura
+    mail=oggetto+"\n"+"\n"+intestazione+testo_ddt+testo_righe_prodotti+"\n"+testo_intermezzo+testo_ritiro+"\n"+chiusura
 
     return mail
+
+
+def creaMailOrdiniTot(df,gdm):
+    ord_inf=gdm[gdm["Esito"]=="INFERIORE"]["Riferimento Ordine Carico"].unique()
+    ordini_car=df[(df["Ordine"].isin(ord_inf))&(df["Ordine"].isin(st.session_state["EvasioTot"]))]["Ordine"].unique()
+    for ord in ordini_car:
+        df_f=df[df["Ordine"]==ord]
+        gdm_f=gdm[gdm["Riferimento Ordine Carico"]==ord]
+        excel_bytes = to_excel(gdm_f,ord)
+        testo = creaMail(df_f,gdm_f)
+        cont=st.container()
+        c1,c2,c3=cont.columns(3,vertical_alignment="bottom")
+        num_ord=c1.text_input("",ord,disabled=True)
+        scarica_ex=c2.download_button(
+                        label="📥 Scarica Excel",
+                        data=excel_bytes,
+                        file_name=f"Esito 2 terzi ordine {ord}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        use_container_width=True,
+                        key=f"scarica_ex_{ord}")
+
+        scarica_txt=c3.download_button(
+                        label="📨 Scrivi Mail",
+                        data=testo,
+                        file_name=f"Mail 2 terzi ordine {ord}.txt",
+                        mime="text/plain",
+                        use_container_width=True,
+                        key=f"scarica_txt_{ord}")
+
+                    
